@@ -130,6 +130,6 @@ MIT License
 
 ---
 
-## 👤 Ransei
+## 👤 Ransei422
 
-Made with ❤️ using Rust.
+Made with ❤️ using Rust, but use at your own risk! 😆
