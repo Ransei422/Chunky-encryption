@@ -54,7 +54,18 @@ This will:
 - Save encrypted metadata (nonce, tag, etc.) to the `--meta` path.
 
 ### Output 📁
-<pre> 📦 <strong>Encrypted Output</strong> ├── 📁 <strong>chunks/</strong> # Encrypted data chunks │ ├── chunk_0.enc │ ├── chunk_1.enc │ ├── chunk_2.enc │ └── ... (more chunks) │ ├── 🔐 <strong>keychain.bin</strong> # Encrypted keychain (contains per-chunk keys) └── 🔑 <strong>master.key</strong> # Master key used to encrypt/decrypt keychain.bin </pre>
+<pre>
+[ Encryption Output Structure ]
+.
+├── chunks/                   # Folder containing encrypted file chunks
+│   ├── chunk_0.enc
+│   ├── chunk_1.enc
+│   ├── chunk_2.enc
+│   └── ...                   # More encrypted chunks
+│
+├── keychain.bin                 # Keychain file (encrypted with master.key)
+└── master.key              # Master key used to encrypt/decrypt keychain.bin
+</pre>
 
 
 ### 🔓 Decrypt (file or directory)
