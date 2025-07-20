@@ -63,8 +63,8 @@ This will:
 │   ├── chunk_2.enc
 │   └── ...                   # More encrypted chunks
 │
-├── keychain.bin                 # Keychain file (encrypted with master.key)
-└── master.key              # Master key used to encrypt/decrypt keychain.bin
+├── keychain.bin              # Keychain file (encrypted with master.key)
+└── master.key                # Master key used to encrypt/decrypt keychain.bin
 </pre>
 
 
