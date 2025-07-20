@@ -53,6 +53,18 @@ This will:
 - Encrypt metadata used for data chunk encrpytion using master key with AES256.
 - Save encrypted metadata (nonce, tag, etc.) to the `--meta` path.
 
+### Output 📁
+[ Encryption Output Structure ]
+.
+├── chunks/                 # Folder containing encrypted file chunks
+│   ├── chunk_0.enc
+│   ├── chunk_1.enc
+│   ├── chunk_2.enc
+│   └── ...                 # More encrypted chunks
+│
+├── keychain.bin            # Keychain file (encrypted with master.key)
+└── master.key              # Master key used to encrypt/decrypt keychain.bin
+
 
 ### 🔓 Decrypt (file or directory)
 
