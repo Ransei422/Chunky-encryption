@@ -27,7 +27,7 @@ cargo build --release
 ### 🧬 Encrypt
 
 ```bash
-./chunky-encryption --key master.key --input test.txt --output chunks --meta keychain.bin   --encrypt
+./chunky-encryption --key master.key --input test.txt --output chunks --meta keychain.bin --encrypt
 ```
 
 This will:
@@ -42,7 +42,7 @@ This will:
 ### 🧬 Encrypt directory
 
 ```bash
-./chunky-encryption --key master.key --input test_dir/ --output chunks --meta keychain.bin   --encrypt --directory
+./chunky-encryption --key master.key --input test_dir/ --output chunks --meta keychain.bin --encrypt --directory
 ```
 
 This will:
