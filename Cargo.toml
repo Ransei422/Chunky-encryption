@@ -1,0 +1,15 @@
+[package]
+name = "chunky-encryption"
+version = "0.1.0"
+edition = "2024"
+authors = ["Ransei422 <lora422@proton.me>"]
+description = "A secure and simple CLI tool written in Rust for encrypting and decrypting files or directories using AES-GCM. Designed to perform multi-level encryption with different keys at 1MB file chunks."
+license = "MIT"
+repository = "https://github.com/Ransei422/Chunky-encryption"
+
+[dependencies]
+tar = "0.4"
+aes-gcm = "0.10"
+rand = "0.9.0"
+clap = { version = "4.5.4", features = ["derive"] }
+bincode = { version = "2.0.0", features = ["derive"] }
