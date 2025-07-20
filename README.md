@@ -57,14 +57,14 @@ This will:
 ### 🔓 Decrypt (file or directory)
 
 ```bash
-./chunky-encryption --key master.key --input chunks/ --output decrypted.tar --meta keychain.bin
+./chunky-encryption --key master.key --input chunks/ --output decrypted.<depends_on_encrypted_file> --meta keychain.bin
 ```
 
 This will:
 - Load your existing 32-byte master key.
 - Load your existing encrypted keychain.bin.
 - Decrypt keychain.bin using master key.
-- Decrypt the input directory file chunks using decrypted kaychain and restore the original content to archive. (* --output decrypted.tar: please save using .tar)
+- Decrypt the input directory file chunks using decrypted kaychain and restore the original content. (* --output >> file format depends on encrypted input/ if encrypted with --directory flag, output will be .tar file )
 
 ---
 
