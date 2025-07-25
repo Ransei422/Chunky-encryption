@@ -2,8 +2,6 @@ use chunky_encryption::*;
 use clap::Parser;
 
 
-
-
 #[derive(Parser, Debug)]
 #[command(author, version, about)]
 pub struct Cli {
@@ -38,37 +36,34 @@ pub struct Cli {
 
 
 
+/// Logic for fetching master key
+fn get_master_key(cli: &Cli) -> Result<Vec<u8>, String> {
+    if cli.encrypt {
+        generate_and_save_master_key(&cli.key)
+            .map_err(|e| format!("[ ERR ] Failed to generate master key: {e}"))
+    } else {
+        let path = std::path::Path::new(&cli.key);
+        if !path.exists() {
+            return Err(format!("[ ERR ] Master key not found: {}", &cli.key));
+        }
+        std::fs::read(path).map_err(|e| format!("[ ERR ] Failed to read master key: {e}"))
+    }
+}
+
+
+
 fn main() {
     let cli = Cli::parse();
-    let master_key: Vec<u8> = if cli.encrypt {
-        match generate_and_save_master_key(&cli.key) {
-            Ok(k) => k,
-            Err(e) => {
-                eprintln!("[ ERR ] Failed to generate master key: {e}");
-                std::process::exit(1);
-            }
-        }
-    } else {
-        if std::path::Path::new(&cli.key).exists() {
-            match std::fs::read(&cli.key) {
-                Ok(bytes) => bytes,
-                Err(e) => {
-                    eprintln!("[ ERR ] Failed to read master key: {e}");
-                    std::process::exit(1);
-                }
-            }
-        } else {
-            eprintln!("[ ERR ] Master key not found: {}", &cli.key);
-            std::process::exit(1);
-        }
-    };
 
+    let master_key = get_master_key(&cli).unwrap_or_else(|e| {
+        eprintln!("{e}");
+        std::process::exit(1);
+    });
 
     if master_key.len() != 32 {
         eprintln!("[ ERR ] Master Key must be just 32 bytes long.");
         std::process::exit(1);
     }
-    
 
     if cli.encrypt {
         if let Err(e) = create_output_dir(&cli.output) {
@@ -76,19 +71,21 @@ fn main() {
             std::process::exit(1);
         }
 
-        if cli.directory {
-            if let Err(e) = archive_and_encrypt_dir(&cli.input, &cli.output, &cli.meta, &master_key) {
-                eprintln!("[ ERR ] Failed to encrypt directory: {e}");
-                std::process::exit(1);
-            }
-            println!("[ INF ] Encryption (directory) complete.");
+        let result = if cli.directory {
+            archive_and_encrypt_dir(&cli.input, &cli.output, &cli.meta, &master_key)
         } else {
-            if let Err(e) = encrypt_file(&cli.input, &cli.output, &cli.meta, &master_key) {
-                eprintln!("[ ERR ] Failed to encrypt file: {e}");
-                std::process::exit(1);
-            }
-            println!("[ INF ] Encryption (file) complete.");
+            encrypt_file(&cli.input, &cli.output, &cli.meta, &master_key)
+        };
+
+        if let Err(e) = result {
+            eprintln!("[ ERR ] Encryption failed: {e}");
+            std::process::exit(1);
         }
+
+        println!(
+            "[ INF ] Encryption ({}) complete.",
+            if cli.directory { "directory" } else { "file" }
+        );
     } else {
         if let Err(e) = decrypt_file(&cli.input, &cli.meta, &cli.output, &master_key, cli.clear, &cli.key) {
             eprintln!("[ ERR ] Failed to decrypt file: {e}");
@@ -96,5 +93,4 @@ fn main() {
         }
         println!("[ INF ] Decryption complete.");
     }
-
 }
