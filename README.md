@@ -71,7 +71,7 @@ This will:
 ### 🔓 Decrypt (file or directory)
 
 ```bash
-./chunky-encryption --key master.key --input chunks/ --output decrypted.<depends_on_encrypted_file> --meta keychain.bin
+./chunky-encryption --key master.key --input chunks/ --output decrypted.<depends_on_encrypted_file, e.g. .jpg> --meta keychain.bin --clear
 ```
 
 This will:
@@ -79,7 +79,7 @@ This will:
 - Load your existing encrypted keychain.bin.
 - Decrypt keychain.bin using master key.
 - Decrypt the input directory file chunks using decrypted kaychain and restore the original content. (* --output >> file format depends on encrypted input/ if encrypted with --directory flag, output will be .tar file )
-
+- Remove all files used for decryption e.g master.key, chunks, keychain.bin (*will happen last, so if decryption fails, nothing will be deleted)
 ---
 
 ## 📄 Command-line Arguments
@@ -92,6 +92,7 @@ This will:
 | `--meta`      | Path to metadata key-chain file               |
 | `--key`       | Path to master key file                       |
 | `--directory` | Treat input as a directory flag               |
+| `--clear`     | Remove all files used for decryption          |
 
 ---
 
