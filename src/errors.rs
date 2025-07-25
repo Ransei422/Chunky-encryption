@@ -1,4 +1,3 @@
-#[allow(dead_code)]
 #[derive(Debug,Clone)]
 pub enum EncryptionErrors {
     FileCreationError,
@@ -15,11 +14,9 @@ pub enum EncryptionErrors {
     DirectoryDeletionError,
     EncodeError,
     FileDeletionError,
-
 }
 
 
-#[allow(dead_code)]
 #[derive(Debug, Clone)]
 pub struct EncryptionError {
     pub code: EncryptionErrors,
@@ -27,7 +24,6 @@ pub struct EncryptionError {
 }
 
 
-#[allow(dead_code)]
 impl EncryptionError {
     pub fn new(code: EncryptionErrors, propagated_error: &str) -> EncryptionError {
         let err = match code {
@@ -62,7 +58,6 @@ impl std::fmt::Display for EncryptionError {
 }
 
 
-#[allow(dead_code)]
-pub fn wrap_err<E: ToString>(code: EncryptionErrors) -> impl FnOnce(E) -> EncryptionError {
+pub(crate) fn wrap_err<E: ToString>(code: EncryptionErrors) -> impl FnOnce(E) -> EncryptionError {
     move |e| EncryptionError::new(code.clone(), &e.to_string())
 }

@@ -2,7 +2,6 @@ use chunky_encryption::*;
 use clap::Parser;
 use std::fs::create_dir_all;
 
-mod errors;
 
 
 
