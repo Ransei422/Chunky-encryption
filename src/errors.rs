@@ -14,7 +14,8 @@ pub enum EncryptionErrors {
     CypherDecryptError,
     NonceError,
     DirectoryDeletionError,
-    EncodeError
+    EncodeError,
+    FileDeletionError,
 
 }
 
@@ -42,6 +43,7 @@ impl EncryptionError {
             EncryptionErrors::NonceError => String::from("→ Not enought data to decode Nonce data from file"),
             EncryptionErrors::DirectoryDeletionError => String::from("→ Not able to delete directory with encrypted data"),
             EncryptionErrors::EncodeError => String::from("→ Not able to encode keychain into vector"),
+            EncryptionErrors::FileDeletionError => String::from("→ Not able to delete unencrypted temporary .tar file")
         };
 
         EncryptionError {

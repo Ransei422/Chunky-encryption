@@ -1,6 +1,5 @@
-use aes_gcm::aead::rand_core::RngCore as _;
-
 use rand::RngCore;
+use aes_gcm::aead::rand_core::RngCore as _;
 use aes_gcm::{
     Aes256Gcm,
     Key,
@@ -9,6 +8,7 @@ use aes_gcm::{
 use aes_gcm::aead::{
     Aead,
     KeyInit,
+    OsRng
 };
 use bincode::{
     encode_to_vec,
@@ -24,17 +24,17 @@ use std::io::{
     Read,
     Write,
 };
-
 use tar::Builder;
 
 
-use aes_gcm::aead::OsRng;
-
 use crate::errors::{EncryptionError, EncryptionErrors};
-
 mod errors;
 
-const CHUNK_SIZE: usize = 1024 * 1024; // 1 MB
+
+// 1MB chunk size
+const CHUNK_SIZE: usize = 1024 * 1024;
+
+
 
 #[derive(Encode, Decode)]
 struct ChunkMetadata {
@@ -42,6 +42,7 @@ struct ChunkMetadata {
     nonce: [u8; 12],
     length: usize,
 }
+
 
 #[derive(Encode, Decode)]
 struct EncryptionMetadata {
@@ -99,7 +100,7 @@ pub fn encrypt_file(input_path: &str, output_dir: &str, meta_path: &str, master_
             length: n,
         });
 
-        print!("\rEncrypted {}MB", index + 1);
+        print!("\r[ INF ] Encrypted {}MB", index + 1);
         std::io::stdout().flush().expect("[ ERR ] Failed to flush stdout");
 
         index += 1;
@@ -147,7 +148,7 @@ pub fn decrypt_file(encrypted_dir: &str, meta_path: &str, output_path: &str, mas
     })?);
 
     for (i, chunk_meta) in metadata.chunks.iter().enumerate() {
-        print!("\rDecrypting chunk {}/{}", i + 1, metadata.chunks.len());
+        print!("\r[ INF ] Decrypting chunk {}/{}", i + 1, metadata.chunks.len());
         std::io::stdout().flush().expect("[ ERR ] Failed to flush stdout");
         
         let chunk_file = format!("{}/chunk_{:01}.enc", encrypted_dir, i);
@@ -222,6 +223,7 @@ fn decrypt_metadata(encrypted: &[u8], master_key: &[u8]) -> Result<Vec<u8>, Encr
 
 
 
+/// Create one archive from all files in directory, encrypt&chop&save it and remove no-encrypted archive
 pub fn archive_and_encrypt_dir(input_dir: &str, output_dir: &str, meta_path: &str, master_key: &[u8]) -> Result<(), EncryptionError> {
     let archive_path = format!("{}/archive.tar", output_dir);
     let tar_file = File::create(&archive_path)
@@ -238,25 +240,24 @@ pub fn archive_and_encrypt_dir(input_dir: &str, output_dir: &str, meta_path: &st
 
     encrypt_file(&archive_path, output_dir, meta_path, master_key)?;
 
-    std::fs::remove_file(&archive_path).ok();
+    std::fs::remove_file(&archive_path)
+        .map_err(|_| EncryptionError::new(EncryptionErrors::FileCreationError))?;
 
     Ok(())
 }
 
 
+
+/// Generate a semi-random master key to encrypt keychain
 pub fn generate_and_save_master_key(key_path: &str) -> Result<Vec<u8>, EncryptionError> {
-    let mut key = [0u8; 32];
+    let mut key: [u8; 32] = [0u8; 32];
     OsRng.fill_bytes(&mut key);
 
     let mut file = File::create(key_path)
-        .map_err(|_| {
-            EncryptionError::new(EncryptionErrors::FileCreationError)
-        })?;
+        .map_err(|_| { EncryptionError::new(EncryptionErrors::FileCreationError)})?;
 
     file.write_all(&key)
-        .map_err(|_| {
-            EncryptionError::new(EncryptionErrors::WritingError)
-        })?;
+        .map_err(|_| { EncryptionError::new(EncryptionErrors::WritingError)})?;
 
     Ok(key.into())
 }
