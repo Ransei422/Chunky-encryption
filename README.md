@@ -71,7 +71,7 @@ This will:
 ### 🔓 Decrypt (file or directory)
 
 ```bash
-./chunky-encryption --key master.key --input chunks/ --output decrypted.<depends_on_encrypted_file> --meta keychain.bin --clear
+./chunky-encryption --key master.key --input chunks/ --output decrypted.<depends_on_encrypted_file, e.g. .jpg> --meta keychain.bin --clear
 ```
 
 This will:
