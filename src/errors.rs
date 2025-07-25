@@ -12,6 +12,7 @@ pub enum EncryptionErrors {
     CypherDecryptError,
     NonceError,
     DirectoryDeletionError,
+    DirectoryCreationError,
     EncodeError,
     FileDeletionError,
 }
@@ -39,6 +40,7 @@ impl EncryptionError {
             EncryptionErrors::CypherDecryptError => format!("→ Not able to decrypt file with current Cypher: {propagated_error}"),
             EncryptionErrors::NonceError => format!("→ Not enought data to decode Nonce data from file: {propagated_error}"),
             EncryptionErrors::DirectoryDeletionError => format!("→ Not able to delete directory with encrypted data: {propagated_error}"),
+            EncryptionErrors::DirectoryCreationError => format!("→ Not able to create directory for encrypted data: {propagated_error}"),
             EncryptionErrors::EncodeError => format!("→ Not able to encode keychain into vector: {propagated_error}"),
             EncryptionErrors::FileDeletionError => format!("→ Not able to delete unencrypted temporary .tar file: {propagated_error}"),
         };

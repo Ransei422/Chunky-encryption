@@ -1,6 +1,5 @@
 use chunky_encryption::*;
 use clap::Parser;
-use std::fs::create_dir_all;
 
 
 
@@ -72,7 +71,7 @@ fn main() {
     
 
     if cli.encrypt {
-        if let Err(e) = create_dir_all(&cli.output) {
+        if let Err(e) = create_output_dir(&cli.output) {
             eprintln!("[ ERR ] Failed to create output directory: {e}");
             std::process::exit(1);
         }

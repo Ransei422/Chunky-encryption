@@ -20,7 +20,8 @@ use bincode::{
 use std::fs::{
     File,
     remove_dir_all,
-    remove_file
+    remove_file,
+    create_dir_all
 };
 use std::io::{
     BufReader,
@@ -253,4 +254,11 @@ pub fn generate_and_save_master_key(key_path: &str) -> Result<Vec<u8>, Encryptio
         .map_err(wrap_err(EncryptionErrors::WritingError))?;
 
     Ok(key.into())
+}
+
+
+
+/// Create a directory for outputed chunk files
+pub fn create_output_dir(path: &str) -> Result<(), EncryptionError> {
+    create_dir_all(path).map_err(wrap_err(EncryptionErrors::DirectoryCreationError))
 }
