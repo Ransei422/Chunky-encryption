@@ -20,16 +20,20 @@ pub struct Cli {
     #[arg(short, long)]
     pub output: String,
 
+    /// Delete all files after decryption
+    #[arg(short, long)]
+    pub clear: bool,
+
     /// Path to the metadata file
     #[arg(short, long)]
     pub meta: String,
 
     /// Set this flag to encrypt (omit for decrypt)
-    #[arg(long)]
+    #[arg(short, long)]
     pub encrypt: bool,
 
     /// Set this flag if input is a directory
-    #[arg(long)]
+    #[arg(short, long)]
     pub directory: bool,
 }
 
@@ -87,7 +91,7 @@ fn main() {
             println!("[ INF ] Encryption (file) complete.");
         }
     } else {
-        if let Err(e) = decrypt_file(&cli.input, &cli.meta, &cli.output, &master_key) {
+        if let Err(e) = decrypt_file(&cli.input, &cli.meta, &cli.output, &master_key, cli.clear, &cli.key) {
             eprintln!("[ ERR ] Failed to decrypt file: {e}");
             std::process::exit(1);
         }

@@ -17,17 +17,21 @@ use bincode::{
     Decode,
     Encode,
 };
-use std::fs::File;
+use std::fs::{
+    File,
+    remove_dir_all,
+    remove_file
+};
 use std::io::{
     BufReader,
     BufWriter,
     Read,
     Write,
+    stdout,
 };
 use tar::Builder;
 
-
-use crate::errors::{wrap_err, EncryptionError, EncryptionErrors};
+use crate::errors::*;
 mod errors;
 
 
@@ -53,6 +57,7 @@ struct EncryptionMetadata {
 
 /// Encrypt input files to chunks and keychain
 pub fn encrypt_file(input_path: &str, output_dir: &str, meta_path: &str, master_key: &[u8]) -> Result<(), EncryptionError> {
+    println!("[ INF ] Starting encryption...");
 
     let mut input = BufReader::new(File::open(input_path)
         .map_err(wrap_err(EncryptionErrors::BufferReadInitialize))?);
@@ -97,7 +102,7 @@ pub fn encrypt_file(input_path: &str, output_dir: &str, meta_path: &str, master_
         });
 
         print!("\r[ INF ] Encrypted {}MB", index + 1);
-        std::io::stdout().flush().expect("[ ERR ] Failed to flush stdout");
+        stdout().flush().expect("[ ERR ] Failed to flush stdout");
 
         index += 1;
     }
@@ -120,12 +125,12 @@ pub fn encrypt_file(input_path: &str, output_dir: &str, meta_path: &str, master_
 
 
 /// Decrypt input files using chunks and keychain
-pub fn decrypt_file(encrypted_dir: &str, meta_path: &str, output_path: &str, master_key: &[u8]) -> Result<(), EncryptionError> {
-    let config = standard();
+pub fn decrypt_file(encrypted_dir: &str, meta_path: &str, output_path: &str, master_key: &[u8], clear: bool, master_key_path: &str) -> Result<(), EncryptionError> {
+    println!("[ INF ] Starting decryption...");
 
+    let config = standard();
     let mut meta_file = File::open(meta_path)
         .map_err(wrap_err(EncryptionErrors::FileOpenError))?;
-
     let mut encrypted = Vec::new();
     meta_file.read_to_end(&mut encrypted)
         .map_err(wrap_err(EncryptionErrors::BufferReadError))?;
@@ -140,7 +145,7 @@ pub fn decrypt_file(encrypted_dir: &str, meta_path: &str, output_path: &str, mas
 
     for (i, chunk_meta) in metadata.chunks.iter().enumerate() {
         print!("\r[ INF ] Decrypting chunk {}/{}", i + 1, metadata.chunks.len());
-        std::io::stdout().flush().expect("[ ERR ] Failed to flush stdout");
+        stdout().flush().expect("[ ERR ] Failed to flush stdout");
         
         let chunk_file = format!("{}/chunk_{:01}.enc", encrypted_dir, i);
         let mut chunk_data = vec![];
@@ -161,7 +166,11 @@ pub fn decrypt_file(encrypted_dir: &str, meta_path: &str, output_path: &str, mas
     }
     println!();
 
-    std::fs::remove_dir_all(encrypted_dir).map_err(wrap_err(EncryptionErrors::DirectoryDeletionError))?;
+    if clear {
+        remove_dir_all(encrypted_dir).map_err(wrap_err(EncryptionErrors::DirectoryDeletionError))?;
+        remove_file(meta_path).map_err(wrap_err(EncryptionErrors::FileDeletionError))?;
+        remove_file(master_key_path).map_err(wrap_err(EncryptionErrors::FileDeletionError))?;
+    }
 
     Ok(())
 }
@@ -207,7 +216,6 @@ fn decrypt_metadata(encrypted: &[u8], master_key: &[u8]) -> Result<Vec<u8>, Encr
 
 
 
-
 /// Create one archive from all files in directory, encrypt&chop&save it and remove no-encrypted archive
 pub fn archive_and_encrypt_dir(input_dir: &str, output_dir: &str, meta_path: &str, master_key: &[u8]) -> Result<(), EncryptionError> {
     let archive_path = format!("{}/archive.tar", output_dir);
@@ -225,7 +233,7 @@ pub fn archive_and_encrypt_dir(input_dir: &str, output_dir: &str, meta_path: &st
 
     encrypt_file(&archive_path, output_dir, meta_path, master_key)?;
 
-    std::fs::remove_file(&archive_path)
+    remove_file(&archive_path)
         .map_err(wrap_err(EncryptionErrors::FileCreationError))?;
 
     Ok(())
