@@ -27,13 +27,13 @@ use std::io::{
 use tar::Builder;
 
 
-use crate::errors::{EncryptionError, EncryptionErrors};
+use crate::errors::{wrap_err, EncryptionError, EncryptionErrors};
 mod errors;
 
 
 // 1MB chunk size
 const CHUNK_SIZE: usize = 1024 * 1024;
-
+const NUANCE_SIZE: usize = 12;
 
 
 #[derive(Encode, Decode)]
@@ -54,9 +54,8 @@ struct EncryptionMetadata {
 /// Encrypt input files to chunks and keychain
 pub fn encrypt_file(input_path: &str, output_dir: &str, meta_path: &str, master_key: &[u8]) -> Result<(), EncryptionError> {
 
-    let mut input = BufReader::new(File::open(input_path).map_err(|_| {
-        EncryptionError::new(EncryptionErrors::BufferReadInitialize)
-    })?);
+    let mut input = BufReader::new(File::open(input_path)
+        .map_err(wrap_err(EncryptionErrors::BufferReadInitialize))?);
 
     let mut metadata = EncryptionMetadata { chunks: vec![] };
     let mut buffer = vec![0u8; CHUNK_SIZE];
@@ -65,9 +64,8 @@ pub fn encrypt_file(input_path: &str, output_dir: &str, meta_path: &str, master_
     let mut rng = rand::rng();
 
     loop {
-        let n = input.read(&mut buffer).map_err(|_| {
-            EncryptionError::new(EncryptionErrors::BufferReadError)
-        })?;
+        let n = input.read(&mut buffer)
+            .map_err(wrap_err(EncryptionErrors::BufferReadError))?;
 
         if n == 0 {
             break;
@@ -83,16 +81,14 @@ pub fn encrypt_file(input_path: &str, output_dir: &str, meta_path: &str, master_
 
         let ciphertext = cipher
             .encrypt(nonce_obj, &buffer[..n])
-            .map_err(|_| EncryptionError::new(EncryptionErrors::CypherEncryptError))?;
+            .map_err(wrap_err(EncryptionErrors::CypherEncryptError))?;
 
         let chunk_file = format!("{}/chunk_{:01}.enc", output_dir, index);
-        let mut out = BufWriter::new(File::create(&chunk_file).map_err(|_| {
-            EncryptionError::new(EncryptionErrors::FileCreationError)
-        })?);
+        let mut out = BufWriter::new(File::create(&chunk_file)
+            .map_err(wrap_err(EncryptionErrors::FileCreationError))?);
 
-        out.write_all(&ciphertext).map_err(|_| {
-            EncryptionError::new(EncryptionErrors::WritingError)
-        })?;
+        out.write_all(&ciphertext)
+            .map_err(wrap_err(EncryptionErrors::WritingError))?;
 
         metadata.chunks.push(ChunkMetadata {
             key,
@@ -108,16 +104,15 @@ pub fn encrypt_file(input_path: &str, output_dir: &str, meta_path: &str, master_
     println!();
 
     let encoded = encode_to_vec(&metadata, standard())
-        .map_err(|_| EncryptionError::new(EncryptionErrors::EncodeError))?;
+        .map_err(wrap_err(EncryptionErrors::EncodeError))?;
+
     let encrypted_metadata = encrypt_metadata(&encoded, master_key)?;
 
-    let mut meta_file = BufWriter::new(File::create(meta_path).map_err(|_| {
-        EncryptionError::new(EncryptionErrors::FileCreationError)
-    })?);
+    let mut meta_file = BufWriter::new(File::create(meta_path)
+        .map_err(wrap_err(EncryptionErrors::FileCreationError))?);
 
-    meta_file.write_all(&encrypted_metadata).map_err(|_| {
-        EncryptionError::new(EncryptionErrors::WritingError)
-    })?;
+    meta_file.write_all(&encrypted_metadata)
+        .map_err(wrap_err(EncryptionErrors::WritingError))?;
 
     Ok(())
 }
@@ -128,24 +123,20 @@ pub fn encrypt_file(input_path: &str, output_dir: &str, meta_path: &str, master_
 pub fn decrypt_file(encrypted_dir: &str, meta_path: &str, output_path: &str, master_key: &[u8]) -> Result<(), EncryptionError> {
     let config = standard();
 
-    let mut meta_file = File::open(meta_path).map_err(|_| {
-        EncryptionError::new(EncryptionErrors::FileOpenError)
-    })?;
+    let mut meta_file = File::open(meta_path)
+        .map_err(wrap_err(EncryptionErrors::FileOpenError))?;
 
     let mut encrypted = Vec::new();
-    meta_file.read_to_end(&mut encrypted).map_err(|_| {
-        EncryptionError::new(EncryptionErrors::BufferReadError)
-    })?;
+    meta_file.read_to_end(&mut encrypted)
+        .map_err(wrap_err(EncryptionErrors::BufferReadError))?;
 
     let decrypted = decrypt_metadata(&encrypted, master_key)?;
     let (metadata, _): (EncryptionMetadata, usize) =
-        decode_from_slice::<EncryptionMetadata, _>(&decrypted, config).map_err(|_| {
-            EncryptionError::new(EncryptionErrors::DecodeError)
-        })?;
+        decode_from_slice::<EncryptionMetadata, _>(&decrypted, config)
+            .map_err(wrap_err(EncryptionErrors::DecodeError))?;
 
-    let mut output = BufWriter::new(File::create(output_path).map_err(|_| {
-        EncryptionError::new(EncryptionErrors::FileCreationError)
-    })?);
+    let mut output = BufWriter::new(File::create(output_path)
+        .map_err(wrap_err(EncryptionErrors::FileCreationError))?);
 
     for (i, chunk_meta) in metadata.chunks.iter().enumerate() {
         print!("\r[ INF ] Decrypting chunk {}/{}", i + 1, metadata.chunks.len());
@@ -154,30 +145,23 @@ pub fn decrypt_file(encrypted_dir: &str, meta_path: &str, output_path: &str, mas
         let chunk_file = format!("{}/chunk_{:01}.enc", encrypted_dir, i);
         let mut chunk_data = vec![];
 
-        BufReader::new(File::open(&chunk_file).map_err(|_| {
-            EncryptionError::new(EncryptionErrors::FileOpenError)
-        })?)
-        .read_to_end(&mut chunk_data)
-        .map_err(|_| {
-            EncryptionError::new(EncryptionErrors::BufferReadError)
-        })?;
+        BufReader::new(File::open(&chunk_file)
+            .map_err(wrap_err(EncryptionErrors::FileOpenError))?)
+            .read_to_end(&mut chunk_data)
+            .map_err(wrap_err(EncryptionErrors::BufferReadError))?;
 
         let cipher = Aes256Gcm::new(Key::<Aes256Gcm>::from_slice(&chunk_meta.key));
         let nonce_obj = Nonce::from_slice(&chunk_meta.nonce);
 
         let plaintext = cipher
             .decrypt(nonce_obj, chunk_data.as_ref())
-            .map_err(|_| EncryptionError::new(EncryptionErrors::CypherDecryptError))?;
+            .map_err(wrap_err(EncryptionErrors::CypherDecryptError))?;
 
-        output.write_all(&plaintext[..chunk_meta.length]).map_err(|_| {
-            EncryptionError::new(EncryptionErrors::WritingError)
-        })?;
+        output.write_all(&plaintext[..chunk_meta.length]).map_err(wrap_err(EncryptionErrors::WritingError))?;
     }
     println!();
 
-    std::fs::remove_dir_all(encrypted_dir).map_err(|_| {
-        EncryptionError::new(EncryptionErrors::DirectoryDeletionError)
-    })?;
+    std::fs::remove_dir_all(encrypted_dir).map_err(wrap_err(EncryptionErrors::DirectoryDeletionError))?;
 
     Ok(())
 }
@@ -187,7 +171,7 @@ pub fn decrypt_file(encrypted_dir: &str, meta_path: &str, output_path: &str, mas
 /// Encrypt keychain with AES256
 fn encrypt_metadata(data: &[u8], master_key: &[u8]) -> Result<Vec<u8>, EncryptionError> {
     let cipher = Aes256Gcm::new_from_slice(master_key)
-        .map_err(|_| EncryptionError::new(EncryptionErrors::CreateCypherError))?;
+        .map_err(wrap_err(EncryptionErrors::CreateCypherError))?;
 
     let mut nonce = [0u8; 12];
     OsRng.fill_bytes(&mut nonce);
@@ -195,7 +179,7 @@ fn encrypt_metadata(data: &[u8], master_key: &[u8]) -> Result<Vec<u8>, Encryptio
     let nonce_obj = Nonce::from_slice(&nonce);
 
     let ciphertext = cipher.encrypt(nonce_obj, data)
-        .map_err(|_| EncryptionError::new(EncryptionErrors::CypherEncryptError))?;
+        .map_err(wrap_err(EncryptionErrors::CypherEncryptError))?;
 
     let mut out = nonce.to_vec();
     out.extend_from_slice(&ciphertext);
@@ -206,20 +190,21 @@ fn encrypt_metadata(data: &[u8], master_key: &[u8]) -> Result<Vec<u8>, Encryptio
 
 /// Decrypt keychain with AES256
 fn decrypt_metadata(encrypted: &[u8], master_key: &[u8]) -> Result<Vec<u8>, EncryptionError> {
-    if encrypted.len() < 12 {
-        return Err(EncryptionError::new(EncryptionErrors::NonceError));
+    if encrypted.len() < NUANCE_SIZE {
+        return Err(EncryptionError::new(EncryptionErrors::NonceError, "Nonce too short"));
     }
 
-    let (nonce_bytes, ciphertext) = encrypted.split_at(12);
+    let (nonce_bytes, ciphertext) = encrypted.split_at(NUANCE_SIZE);
 
     let cipher = Aes256Gcm::new_from_slice(master_key)
-        .map_err(|_| EncryptionError::new(EncryptionErrors::CreateCypherError))?;
+        .map_err(wrap_err(EncryptionErrors::CreateCypherError))?;
 
     let nonce_obj = Nonce::from_slice(nonce_bytes);
 
     cipher.decrypt(nonce_obj, ciphertext)
-        .map_err(|_| EncryptionError::new(EncryptionErrors::CypherDecryptError))
+        .map_err(wrap_err(EncryptionErrors::CypherDecryptError))
 }
+
 
 
 
@@ -227,21 +212,21 @@ fn decrypt_metadata(encrypted: &[u8], master_key: &[u8]) -> Result<Vec<u8>, Encr
 pub fn archive_and_encrypt_dir(input_dir: &str, output_dir: &str, meta_path: &str, master_key: &[u8]) -> Result<(), EncryptionError> {
     let archive_path = format!("{}/archive.tar", output_dir);
     let tar_file = File::create(&archive_path)
-        .map_err(|_| EncryptionError::new(EncryptionErrors::FileCreationError))?;
+        .map_err(wrap_err(EncryptionErrors::FileCreationError))?;
 
-    let mut tar_builder = Builder::new(tar_file);
-    tar_builder
-        .append_dir_all(".", input_dir)
-        .map_err(|_| EncryptionError::new(EncryptionErrors::ArchiveCreationError))?;
+       let mut tar_builder = Builder::new(tar_file);
+        tar_builder
+            .append_dir_all(".", input_dir)
+            .map_err(wrap_err(EncryptionErrors::ArchiveCreationError))?;
 
-    tar_builder
-        .into_inner()
-        .map_err(|_| EncryptionError::new(EncryptionErrors::ArchiveCreationError))?;
+        tar_builder
+            .into_inner()
+            .map_err(wrap_err(EncryptionErrors::ArchiveCreationError))?;
 
     encrypt_file(&archive_path, output_dir, meta_path, master_key)?;
 
     std::fs::remove_file(&archive_path)
-        .map_err(|_| EncryptionError::new(EncryptionErrors::FileCreationError))?;
+        .map_err(wrap_err(EncryptionErrors::FileCreationError))?;
 
     Ok(())
 }
@@ -254,10 +239,10 @@ pub fn generate_and_save_master_key(key_path: &str) -> Result<Vec<u8>, Encryptio
     OsRng.fill_bytes(&mut key);
 
     let mut file = File::create(key_path)
-        .map_err(|_| { EncryptionError::new(EncryptionErrors::FileCreationError)})?;
+        .map_err(wrap_err(EncryptionErrors::FileCreationError))?;
 
     file.write_all(&key)
-        .map_err(|_| { EncryptionError::new(EncryptionErrors::WritingError)})?;
+        .map_err(wrap_err(EncryptionErrors::WritingError))?;
 
     Ok(key.into())
 }

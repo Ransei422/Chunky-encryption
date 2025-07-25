@@ -1,6 +1,5 @@
-
 #[allow(dead_code)]
-#[derive(Debug)]
+#[derive(Debug,Clone)]
 pub enum EncryptionErrors {
     FileCreationError,
     FileOpenError,
@@ -19,31 +18,33 @@ pub enum EncryptionErrors {
 
 }
 
+
 #[allow(dead_code)]
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct EncryptionError {
     pub code: EncryptionErrors,
     pub error_msg: String,
 }
 
+
 #[allow(dead_code)]
 impl EncryptionError {
-    pub fn new(code: EncryptionErrors) -> EncryptionError {
+    pub fn new(code: EncryptionErrors, propagated_error: &str) -> EncryptionError {
         let err = match code {
-            EncryptionErrors::FileCreationError => String::from("→ Not able to create a file"),
-            EncryptionErrors::FileOpenError => String::from("→ Not able to open file"),
-            EncryptionErrors::DecodeError => String::from("→ Not able to decode file"),
-            EncryptionErrors::BufferReadInitialize => String::from("→ Not able to create buffer reader"),
-            EncryptionErrors::BufferReadError => String::from("→ Not able to read data from buffer"),
-            EncryptionErrors::WritingError => String::from("→ Not able to write data"),
-            EncryptionErrors::ArchiveCreationError => String::from("→ Not able to create archive"),
-            EncryptionErrors::CreateCypherError => String::from("→ Not able to create cypher from Master Key"),
-            EncryptionErrors::CypherEncryptError => String::from("→ Not able to encrypt file with current Cypher"),
-            EncryptionErrors::CypherDecryptError => String::from("→ Not able to decrypt file with current Cypher"),
-            EncryptionErrors::NonceError => String::from("→ Not enought data to decode Nonce data from file"),
-            EncryptionErrors::DirectoryDeletionError => String::from("→ Not able to delete directory with encrypted data"),
-            EncryptionErrors::EncodeError => String::from("→ Not able to encode keychain into vector"),
-            EncryptionErrors::FileDeletionError => String::from("→ Not able to delete unencrypted temporary .tar file")
+            EncryptionErrors::FileCreationError => format!("→ Not able to create a file: {propagated_error}"),
+            EncryptionErrors::FileOpenError => format!("→ Not able to open a file: {propagated_error}"),
+            EncryptionErrors::DecodeError => format!("→ Not able to decode a file: {propagated_error}"),
+            EncryptionErrors::BufferReadInitialize => format!("→ Not able to create buffer reader: {propagated_error}"),
+            EncryptionErrors::BufferReadError => format!("→ Not able to read data from buffer: {propagated_error}"),
+            EncryptionErrors::WritingError => format!("→ Not able to write a data: {propagated_error}"),
+            EncryptionErrors::ArchiveCreationError => format!("→ Not able to create an archive: {propagated_error}"),
+            EncryptionErrors::CreateCypherError => format!("→ Not able to create cypher from Master Key: {propagated_error}"),
+            EncryptionErrors::CypherEncryptError => format!("→ Not able to encrypt file with current Cypher: {propagated_error}"),
+            EncryptionErrors::CypherDecryptError => format!("→ Not able to decrypt file with current Cypher: {propagated_error}"),
+            EncryptionErrors::NonceError => format!("→ Not enought data to decode Nonce data from file: {propagated_error}"),
+            EncryptionErrors::DirectoryDeletionError => format!("→ Not able to delete directory with encrypted data: {propagated_error}"),
+            EncryptionErrors::EncodeError => format!("→ Not able to encode keychain into vector: {propagated_error}"),
+            EncryptionErrors::FileDeletionError => format!("→ Not able to delete unencrypted temporary .tar file: {propagated_error}"),
         };
 
         EncryptionError {
@@ -53,8 +54,15 @@ impl EncryptionError {
     }
 }
 
+
 impl std::fmt::Display for EncryptionError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
         write!(f, "{}", self.error_msg)
     }
+}
+
+
+#[allow(dead_code)]
+pub fn wrap_err<E: ToString>(code: EncryptionErrors) -> impl FnOnce(E) -> EncryptionError {
+    move |e| EncryptionError::new(code.clone(), &e.to_string())
 }
